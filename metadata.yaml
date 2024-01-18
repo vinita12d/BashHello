@@ -1,8 +1,8 @@
-Name: BashHello
+Name: LiveSite
 Technology: standalone
 Type: active
 Engine: bash
-Description: Run bash script to generate alert.
+Description: Bash script to check status code of targeted endpoint.
 Charset: UTF-8
-tags:
-  Type: Blackbox, Web
+Tags:
+  Type: Blackbox, Web 
