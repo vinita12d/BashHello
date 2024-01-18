@@ -1,91 +1,74 @@
-#!/bin/bash
+import os
+import sys
+import json
 
-# Source the prancer-lib shell script to call all pr-* library functions.
-source shlib/prancer-lib.sh
+sys.path.append(os.path.dirname(os.path.realpath(__file__)) + os.sep + "shlib")
 
-# Checks for correct usage/syntax
-if [ "$#" -lt 1 ]; then
-  echo "Usage: $0 <Target URL/IP> [Port Range]"
-  echo "Default Port Range: 22-443"
-  exit 1
-fi
+from shlib.prancer_site import get_site
+from shlib.prancer_result import get_result
+from shlib.prancer_spider import get_spider
+from shlib.prancer_output import get_output
 
-# Assigned command line arguments
-fqdn=`python3 shlib/prancer_fqdn.py $1`
-# echo $fqdn
-TARGET="$fqdn"
+def pr_alert(url, title=None):
 
-PORT_RANGE="22-443"
-if [ "$#" -gt 1 ]; then
-  PORT_RANGE="$2"
-fi
-
-# Setting the array name
-OPEN_PORTS=()
-
-#Function for netcat scan
-check_port() {
-  if nc -z -w 1 $1 $2; then
-     # Add the open port to the array
-     OPEN_PORTS+=($2)
-  fi
-}
-
-# Splitting the port range into 'start' and 'end'
-IFS="-" read START_PORT END_PORT <<< "$PORT_RANGE"
-
-# Scanning each port in the range
-for ((port=START_PORT; port<=END_PORT; port++)); do
-  check_port $TARGET $port
-done
-
-# Check if any open ports were found
-if [ ${#OPEN_PORTS[@]} -ne 0 ]; then
-# echo "Open ports on $TARGET found: ${OPEN_PORTS[*]}"
-  OPEN_PORTS_FOUND=true
-     title="Open ports found on $TARGET found: ${OPEN_PORTS[*]}"
-     severity="High"
-     desc="Open or exposed ports increase the potential attack surface and could leave you vulnerable to compromise."
-     alertid="202"
-     solution=""
-     cweid=1125
-     wascid=15
-     reference="https://cwe.mitre.org/data/definitions/1125.html"
-
-     msg_out1_file=`pr_get_message_json "$TARGET" "" "" "$modified_url" "$r"`
-    # cat msg_out1_file
-     al_out_file=`pr_get_alert_json "$alertid" "$title" "$severity" "$desc" "1" "$solution" "$reference" "$cweid" "$wascid" ""`
+  # Message 1 Content:
+  msg_data1 = {
+      "uri": url + "/bodgeit/search.jsp?q=%3C%2Ffont%3E%3CscrIpt%3Ealert%281%29%3B%3C%2FscRipt%3E%3Cfont%3E",
+      "method": "GET",
+      "param": "q",
+      "attack": "</font><scrIpt>alert(1);</scRipt><font>",
+      "evidence": "</font><scrIpt>alert(1);</scRipt><font>"
+  } 
  
-    pr_update_json "$al_out_file" "$msg_out1_file" "instances"
+  # Message 2 Content:
+  msg_data2 = {
+      "uri": url + "/bodgeit/contact.jsp",
+      "method": "GET",
+      "param": "q",
+      "attack": "</font><scrIpt>alert(2);</scRipt><font>",
+      "evidence": "</font><scrIpt>alert(2);</scRipt><font>"
+  } 
 
-  # Get an temporary site json file
-    site_out_file=`pr_site_file $1`
-    pr_update_json "$site_out_file" "$al_out_file" "alerts"
-  # echo "SITE: $site_out_file"
-  # Get an temporary result json file
-    result_out_file=`pr_result_file $1`
-    pr_update_json "$result_out_file" "$site_out_file" "site"
-  # echo "result: $result_out_file"
-  # Get an temporary spider json file
-  # spider_out_file=`pr_spider_file $1`
-  # echo "spider: $spider_out_file"
-  # Build the alert output json file
-    out_file=`pr_output_file`
-  # echo "OUTPUT: $out_file"
-    pr_update_json "$out_file" "$result_out_file" "Result"
-  # pr_update_json "$out_file" "$spider_out_file" "Spider"
-# print_and_write "$out_file" "$site_out_file" "site"
+  if title is None:
+      title = "Prancer Python Script Alert"
 
-# Check the output
-  if [ $? -ne 0 ]; then
-  echo "Failed to generate alert!...."
-  else
-  cat $out_file
-  fi
-  # Handle the case when no ports are found
-  else
-  echo "No open ports found on $TARGET"
-exit 1
-fi
+  # Alert Content:
+  alert_data = {
+      "alertid": "40012",
+      "name": title,
+      "severity": "Medium",
+      "desc": "<p>Cross-site Scripting (XSS) is an attack technique that involves ...</p>",
+      "count": "",
+      "solution": "<p>Phase: Architecture and Design</p><p>Use a vetted library or framework that does not ...</p>",
+      "reference":"<p>http://projects.webappsec.org/Cross-Site-Scripting</p><p>http://cwe.mitre.org/data/definitions/79.html</p>",
+      "cweid": "532",
+      "wascid": "34",
+      "sourceid": "36977",
+      "instances": []
+  }
 
-exit 0
+  # Add Messages to alertItem
+  alert_data["instances"].append(msg_data1)
+  alert_data["instances"].append(msg_data2)
+  alert_data["count"] = "%d" % len(alert_data["instances"])
+  site_data = get_site(None, url)
+  site_data['alerts'].append(alert_data)
+  result_data = get_result(None)
+  result_data["site"].append(site_data)
+
+  spider_data = get_spider(None, 'spider', url)
+  output = get_output(None)
+  output["Result"] = result_data
+  output["Spider"] = spider_data
+  return output
+
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1 : 
+        if len(sys.argv) > 2:
+            data =  pr_alert(sys.argv[1], sys.argv[2])
+        else:
+            data =  pr_alert(sys.argv[1])
+        print(json.dumps(data, indent=2))
+        exit(0)
+    exit(1)
