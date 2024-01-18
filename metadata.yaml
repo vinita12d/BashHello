@@ -1,10 +1,8 @@
-Name: Bash Port Scanner
-Description: Bash script that actively checks for open ports on specified target URL/IP.
-Technology: Standalone
-Type: Active
-Engine: Bash
+Name: PythonScript
+Technology: standalone
+Type: active
+Engine: python
+Description: Run python script to generate alert.
 Charset: UTF-8
-Tags:
-  Type: Web 
-Parameters:
- PortRange: 22-80
+tags:
+  Type: Blackbox, Web  
