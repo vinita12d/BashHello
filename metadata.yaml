@@ -1,8 +1,10 @@
-Name: LiveSite
-Technology: standalone
-Type: active
-Engine: bash
-Description: Bash script to check status code of targeted endpoint.
+Name: Bash Port Scanner
+Description: Bash script that actively checks for open ports on specified target URL/IP.
+Technology: Standalone
+Type: Active
+Engine: Bash
 Charset: UTF-8
 Tags:
-  Type: Blackbox, Web 
+  Type: Web 
+Parameters:
+ PortRange: 22-80
